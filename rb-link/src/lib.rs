@@ -40,7 +40,7 @@ impl BlueProbe {
     }
     fn get(&self) -> B2RMessage {
         let b2r_fifo_path = format!("{}{}", B2R_PREFIX, self.id);
-        let mut file = File::open(&b2r_fifo_path).expect("Error opening B2R fifo");
+        let mut file = File::open(b2r_fifo_path).expect("Error opening B2R fifo");
 
         let mut buffer = vec![0u8; 8 + (self.get_t_width / 8) as usize];
         file.read_exact(&mut buffer).expect("Error reading from B2R fifo");
@@ -57,7 +57,7 @@ impl BlueProbe {
     }
     fn put(&self, data: &[u8]) {
         let r2b_fifo_path = format!("{}{}", R2B_PREFIX, self.id);
-        let mut file = File::open(&r2b_fifo_path).expect("Error open R2B fifo");
+        let mut file = File::open(r2b_fifo_path).expect("Error open R2B fifo");
 
         file.write_all(data).expect("Error writing to R2B fifo");
     }
@@ -69,12 +69,12 @@ impl Drop for BlueProbe {
         let r2b_fifo_path = format!("{}{}", R2B_PREFIX, self.id);
 
         // Remove B2R fifo
-        if let Err(err) = fs::remove_file(&b2r_fifo_path) {
+        if let Err(err) = fs::remove_file(b2r_fifo_path) {
             println!("Error removing B2R fifo: {}", err);
         }
 
         // Remove R2B fifo
-        if let Err(err) = fs::remove_file(&r2b_fifo_path) {
+        if let Err(err) = fs::remove_file(r2b_fifo_path) {
             println!("Error removing R2B fifo: {}", err);
         }
     }
