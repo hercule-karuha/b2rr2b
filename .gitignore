@@ -1,2 +1,3 @@
+/examples/adder-pipeline/build/
 /probe-blue/build/
-**/target
+**/target/
