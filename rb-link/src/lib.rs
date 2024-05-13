@@ -38,7 +38,6 @@ impl BlueProbe {
             put_t_width,
         }
     }
-
     fn get(&self) -> B2RMessage {
         let b2r_fifo_path = format!("{}{}", B2R_PREFIX, self.id);
         let mut file = File::open(&b2r_fifo_path).expect("Error opening B2R fifo");
