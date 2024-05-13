@@ -5,18 +5,24 @@ use std::{fs::{self, File}, io::{Read, Write}};
 const B2R_PREFIX: &str = "/tmp/b2r-fifo";
 const R2B_PREFIX: &str = "/tmp/r2b-fifo";
 
+#[allow(dead_code)]
+#[allow(unused_variables)]
 struct BlueProbe {
     id: u32,
     get_t_width: u32,
     put_t_width: u32,
 }
 
+#[allow(dead_code)]
+#[allow(unused_variables)]
 struct B2RMessage {
     id: u32,
     cycles: u32,
     message: Vec<u8>,
 }
 
+#[allow(dead_code)]
+#[allow(unused_variables)]
 impl BlueProbe {
     fn new(id: u32, get_t_width: u32, put_t_width: u32) -> Self {
         let b2r_fifo_path = format!("{}{}", B2R_PREFIX, id);
