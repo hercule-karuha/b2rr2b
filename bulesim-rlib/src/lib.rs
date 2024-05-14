@@ -1,51 +1,54 @@
-use std::{fs::OpenOptions, io::{Read, Write}};
+use std::os::unix::net::UnixStream;
+use std::io::{Read, Write};
+use serde::{Serialize, Deserialize};
 
-const B2R_PREFIX: &str = "/tmp/b2r-fifo";
-const R2B_PREFIX: &str = "/tmp/r2b-fifo";
+#[derive(Serialize, Deserialize)]
+pub enum GetPutMessage {
+    Get(u32),
+    Put(B2RMessage),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct B2RMessage {
+    pub id: u32,
+    pub cycles: u32,
+    pub message: Vec<u8>,
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32) {
-    let fifo_path = format!("{}{}", R2B_PREFIX, id);
-    let mut fifo = match OpenOptions::new().read(true).open(fifo_path.clone()) {
-        Ok(f) => f,
-        Err(_) => panic!("file to open: {}", fifo_path),
-    };
+    let res_slice = std::slice::from_raw_parts_mut(res_ptr, size as usize);
 
-    let mut buffer = vec![0u8; size as usize];
-    match fifo.read_exact(&mut buffer) {
-        Ok(_) => {}
-        Err(err) => panic!("Failed to read from FIFO: {}", err),
-    };
+    let socket_path = String::from("/tmp/b2rr2b");
+    let mut stream = UnixStream::connect(socket_path).expect("Failed to connect to socket");
 
-    let data_slice = std::slice::from_raw_parts_mut(res_ptr, size as usize);
-    data_slice.copy_from_slice(&buffer);
+    let get_message = GetPutMessage::Get(id);
+
+    let serialized = bincode::serialize(&get_message).expect("Serialization failed");
+
+    stream.write_all(&serialized).expect("Failed to write to stream");
+
+    stream.read_exact(res_slice).expect("Failed to read from stream");
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32) -> u8 {
-    let fifo_path = format!("{}{}", B2R_PREFIX, id);
-    let mut fifo = match OpenOptions::new().write(true).open(fifo_path.clone()) {
-        Ok(f) => f,
-        Err(_) => panic!("Failed to open file: {}", fifo_path),
+    let data_slice = std::slice::from_raw_parts(data_ptr, size as usize);
+
+    let socket_path = String::from("/tmp/b2rr2b");
+    let mut stream = UnixStream::connect(socket_path).expect("Failed to connect to socket");
+
+    let b2r_message = B2RMessage {
+        id,
+        cycles,
+        message: data_slice.to_vec(),
     };
 
-    let mut buffer = Vec::with_capacity((size + 8) as usize);
+    let put_message = GetPutMessage::Put(b2r_message);
 
-    // Write id
-    buffer.extend_from_slice(&id.to_le_bytes());
+    let serialized = bincode::serialize(&put_message).expect("Serialization failed");
 
-    // Write cycles
-    buffer.extend_from_slice(&cycles.to_le_bytes());
+    stream.write_all(&serialized).expect("Failed to write to stream");
 
-    // Write data_ptr data
-    let data_slice = std::slice::from_raw_parts(data_ptr, size as usize);
-    buffer.extend_from_slice(data_slice);
-
-    match fifo.write_all(&buffer) {
-        Ok(_) => 0,
-        Err(err) => {
-            eprintln!("Failed to write to FIFO: {}", err);
-            1
-        }
-    }
+    1
 }
