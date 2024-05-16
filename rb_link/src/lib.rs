@@ -6,7 +6,7 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
-use std::usize;
+use std::{fs, usize};
 
 #[derive(Serialize, Deserialize)]
 pub enum GetPutMessage {
@@ -66,6 +66,7 @@ impl B2RServer {
         let b2r_cache = self.b2r_cache.clone();
         let r2b_cache = self.r2b_cache.clone();
         thread::spawn(move || {
+            let _ = fs::remove_file("/tmp/b2rr2b");
             let listener = UnixListener::bind("/tmp/b2rr2b").expect("Failed to bind Unix listener");
             for stream in listener.incoming() {
                 let mut stream = match stream {
@@ -120,6 +121,17 @@ impl B2RServer {
         }
     }
 
+    pub fn try_get(&self, id: u32) -> Option<B2RMessage> {
+        println!("get from bliesim id: {}", id);
+        let mut b2r_cache = self.b2r_cache.lock().unwrap();
+        if let Some(queue) = b2r_cache.get_mut(&id) {
+            if let Some(b2r_message) = queue.pop_front() {
+                return Some(b2r_message);
+            }
+        }
+        None
+    }
+
     pub fn put(&mut self, id: u32, message: Vec<u8>) {
         if message.len() == 4 {
             println!(
@@ -131,6 +143,39 @@ impl B2RServer {
         let mut r2b_cache = self.r2b_cache.lock().unwrap();
         let queue = r2b_cache.entry(id).or_insert_with(VecDeque::new);
         queue.push_back(r2b_message);
+    }
+
+    pub fn get_cycle_message(&mut self) -> Vec<B2RMessage> {
+        let mut min_cycles = u32::MAX;
+        let mut messages: Vec<B2RMessage> = Vec::new();
+        let mut b2r_cache = self.b2r_cache.lock().unwrap();
+        for queue in b2r_cache.values() {
+            if let Some(b2r_message) = queue.front() {
+                if b2r_message.cycles < min_cycles {
+                    min_cycles = b2r_message.cycles;
+                }
+            }
+        }
+        for queue in b2r_cache.values_mut() {
+            if let Some(b2r_message) = queue.front() {
+                if b2r_message.cycles == min_cycles {
+                    messages.push(queue.pop_front().unwrap());
+                }
+            }
+        }
+        messages
+    }
+
+    pub fn get_id_all(&mut self, id: u32) -> Vec<B2RMessage> {
+        let mut b2r_cache = self.b2r_cache.lock().unwrap();
+        let mut messages: Vec<B2RMessage> = Vec::new();
+
+        if let Some(queue) = b2r_cache.get_mut(&id) {
+            while let Some(b2r_message) = queue.pop_front() {
+                messages.push(b2r_message);
+            }
+        }
+        messages
     }
 }
 

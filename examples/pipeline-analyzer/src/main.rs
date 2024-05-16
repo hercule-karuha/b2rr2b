@@ -1,4 +1,6 @@
 use rb_link::*;
+use std::thread;
+use std::time::Duration;
 
 fn main() {
     let mut server = B2RServer::new();
@@ -7,25 +9,24 @@ fn main() {
         server.put(0, num.to_le_bytes().to_vec())
     }
     server.add_probe(1, 32, 32);
+
     let handlle = server.serve();
-    for i in 0..10 {
-        let msg = server.get(0);
-        match msg {
-            Some(msg) => {
-                println!(
-                    "get from blue id:{}, cycle:{}, data:{}",
-                    msg.id,
-                    msg.cycles,
-                    u32::from_le_bytes([
-                        msg.message[0],
-                        msg.message[1],
-                        msg.message[2],
-                        msg.message[3]
-                    ])
-                );
-            }
-            None => panic!("fail to get from id:{}", 0),
-        }
+
+    thread::sleep(Duration::from_secs(10));
+
+    let msg_vec = server.get_id_all(0);
+    for msg in msg_vec {
+        println!(
+            "get from blue id:{}, cycle:{}, data:{}",
+            msg.id,
+            msg.cycles,
+            u32::from_le_bytes([
+                msg.message[0],
+                msg.message[1],
+                msg.message[2],
+                msg.message[3]
+            ])
+        );
     }
     let _ = handlle.join();
 }
