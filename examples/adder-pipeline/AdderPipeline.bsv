@@ -10,13 +10,13 @@ module mkAdderPipeline(Empty);
     Reg#(Bit#(32)) put_times <- mkReg(0);
 
 
-    rule doFetch if (fetch_times < 10);
+    rule doGet if (fetch_times < 10);
         Bit#(32) data = probe.get_data();
         f2d.enq(data);
         fetch_times <= fetch_times + 1;
     endrule
 
-    rule doDisplay;
+    rule doPut;
         Bit#(32) data = f2d.first;
         f2d.deq;
         probe.put_data(data + 1);

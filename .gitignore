@@ -1,4 +1,5 @@
 /examples/adder-pipeline/build/
+/examples/TenStage/build/
 /probe-blue/build/
 **/target/
 **.out**
