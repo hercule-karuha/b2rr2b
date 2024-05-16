@@ -4,7 +4,6 @@ use std::time::Duration;
 
 fn main() {
     let mut input_data: Vec<u32> = (1..200).collect();
-    input_data[56] = 114514;
 
     let mut server = B2RServer::new();
 

@@ -17,7 +17,7 @@ pub struct B2RMessage {
 
 #[no_mangle]
 pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32) {
-    println!("sned get");
+    // println!("sned get");
     let res_slice = std::slice::from_raw_parts_mut(res_ptr, size as usize);
 
     let socket_path = String::from("/tmp/b2rr2b");
@@ -40,7 +40,7 @@ pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32)
 
 #[no_mangle]
 pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32) -> u32 {
-    println!("sned put");
+    // println!("sned put");
     let data_slice = std::slice::from_raw_parts(data_ptr, size as usize);
 
     let socket_path = String::from("/tmp/b2rr2b");

@@ -14,7 +14,7 @@ module mkAdderPipeline(Empty);
     function gen_e_f_probe(Integer x) = mkRProbe(fromInteger(x));
     function gen_fire_probes(Integer x) = mkRProbe(fromInteger(x + 10));
 
-    Vector#(9, FIFOF#(Bit#(32))) fifos <- replicateM(mkFIFOF);
+    Vector#(9, FIFOF#(Bit#(32))) fifos <- replicateM(mkSizedFIFOF(5));
     Vector#(9, RProbe#(Bool, Bit#(16))) e_f_probes <- genWithM(gen_e_f_probe);
     Vector#(9, RProbe#(Bool, Bool)) fire_probes <- genWithM(gen_fire_probes);
 
@@ -61,7 +61,7 @@ module mkAdderPipeline(Empty);
     
     rule stage5;
         Bit#(32) data = fifos[3].first();
-        if(data != 114514) begin
+        if(data != 32'h5c) begin
             fifos[3].deq();
             fire_probes[4].put_data(True);
             fifos[4].enq(data + 1);
