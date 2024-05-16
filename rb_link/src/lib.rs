@@ -100,7 +100,6 @@ impl B2RServer {
                             .entry(b2r_message.id)
                             .or_insert_with(VecDeque::new);
                         queue.push_back(b2r_message);
-                        println!("put end");
                     }
                 }
             }
@@ -108,7 +107,6 @@ impl B2RServer {
     }
 
     pub fn get(&self, id: u32) -> Option<B2RMessage> {
-        println!("get from bliesim id: {}", id);
         loop {
             let mut b2r_cache = self.b2r_cache.lock().unwrap();
             if let Some(queue) = b2r_cache.get_mut(&id) {
@@ -122,7 +120,6 @@ impl B2RServer {
     }
 
     pub fn try_get(&self, id: u32) -> Option<B2RMessage> {
-        println!("get from bliesim id: {}", id);
         let mut b2r_cache = self.b2r_cache.lock().unwrap();
         if let Some(queue) = b2r_cache.get_mut(&id) {
             if let Some(b2r_message) = queue.pop_front() {
@@ -133,12 +130,6 @@ impl B2RServer {
     }
 
     pub fn put(&mut self, id: u32, message: Vec<u8>) {
-        if message.len() == 4 {
-            println!(
-                "put data: {}",
-                u32::from_le_bytes([message[0], message[1], message[2], message[3]])
-            );
-        }
         let r2b_message = R2BMessage { id, message };
         let mut r2b_cache = self.r2b_cache.lock().unwrap();
         let queue = r2b_cache.entry(id).or_insert_with(VecDeque::new);
@@ -184,7 +175,7 @@ fn get_msg_size(bytes: Vec<u8>) -> u32 {
 }
 
 fn receive_getput(stream: &mut UnixStream) -> Result<GetPutMessage, Box<bincode::ErrorKind>> {
-    println!("connect comeing");
+    // println!("connect comeing");
     let mut sz_buf: Vec<u8> = vec![0; 4];
     stream
         .read_exact(&mut sz_buf)
@@ -194,6 +185,6 @@ fn receive_getput(stream: &mut UnixStream) -> Result<GetPutMessage, Box<bincode:
     let _ = stream
         .read_exact(&mut buffer)
         .expect("Failed to read from stream");
-    println!("sz_msg is {}", sz_msg);
+    // println!("sz_msg is {}", sz_msg);
     return bincode::deserialize::<GetPutMessage>(&buffer);
 }

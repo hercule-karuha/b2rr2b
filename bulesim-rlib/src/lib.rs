@@ -36,12 +36,6 @@ pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32)
     stream
         .read_exact(res_slice)
         .expect("Failed to read from stream");
-    if size == 4 {
-        println!(
-            "get data: {}",
-            u32::from_le_bytes([res_slice[0], res_slice[1], res_slice[2], res_slice[3]])
-        );
-    }
 }
 
 #[no_mangle]
@@ -58,13 +52,6 @@ pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32)
     };
 
     let put_message = GetPutMessage::Put(b2r_message);
-
-    if size == 4 {
-        println!(
-            "put data: {}",
-            u32::from_le_bytes([data_slice[0], data_slice[1], data_slice[2], data_slice[3]])
-        );
-    }
 
     let serialized = bincode::serialize(&put_message).expect("Serialization failed");
     let msg_size = serialized.len() as u32;
