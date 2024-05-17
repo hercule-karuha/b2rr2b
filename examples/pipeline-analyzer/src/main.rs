@@ -8,11 +8,10 @@ fn main() {
         let num: u32 = i;
         server.put(0, num.to_le_bytes().to_vec())
     }
-    server.add_probe(1, 32, 32);
 
-    let handlle = server.serve();
+    let _ = server.serve();
 
-    thread::sleep(Duration::from_secs(10));
+    thread::sleep(Duration::from_secs(3));
 
     let msg_vec = server.get_id_all(0);
     for msg in msg_vec {
@@ -28,5 +27,5 @@ fn main() {
             ])
         );
     }
-    let _ = handlle.join();
 }
+ 

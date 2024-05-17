@@ -1,3 +1,4 @@
+//! A Rust library for interacting with the Bluesim simulation program.
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 
@@ -8,19 +9,20 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use std::{fs, usize};
 
+#[cfg(test)]
+mod test;
+
 #[derive(Serialize, Deserialize)]
 pub enum GetPutMessage {
     Get(u32),
     Put(B2RMessage),
 }
 
-#[allow(dead_code)]
-#[allow(unused_variables)]
-pub struct ProbeInfo {
-    id: u32,
-    get_t_width: u32,
-    put_t_width: u32,
-}
+// pub struct ProbeInfo {
+//     id: u32,
+//     get_t_width: u32,
+//     put_t_width: u32,
+// }
 
 #[derive(Serialize, Deserialize)]
 struct R2BMessage {
@@ -28,8 +30,10 @@ struct R2BMessage {
     message: Vec<u8>,
 }
 
-#[allow(dead_code)]
-#[allow(unused_variables)]
+/// Message from Bluesim:
+/// - id: ID of the probe that sent the message
+/// - cycles: Clock cycles when the message was sent
+/// - message: Sent message, where message.len() == ceil(put_t_width/8). put_t_width is the width of put_t defined in your BSV code.
 #[derive(Serialize, Deserialize)]
 pub struct B2RMessage {
     pub id: u32,
@@ -37,32 +41,38 @@ pub struct B2RMessage {
     pub message: Vec<u8>,
 }
 
-#[allow(dead_code)]
-#[allow(unused_variables)]
+/// A server for interacting with Bluesim.
+/// Cache bidirectional data and send data upon receiving requests.
 pub struct B2RServer {
-    probe_infos: Arc<Mutex<HashMap<u32, ProbeInfo>>>,
+    // probe_infos: Arc<Mutex<HashMap<u32, ProbeInfo>>>,
     b2r_cache: Arc<Mutex<HashMap<u32, VecDeque<B2RMessage>>>>,
     r2b_cache: Arc<Mutex<HashMap<u32, VecDeque<R2BMessage>>>>,
 }
 
 impl B2RServer {
+    /// make a new server
     pub fn new() -> B2RServer {
         B2RServer {
-            probe_infos: Arc::new(Mutex::new(HashMap::new())),
+            // probe_infos: Arc::new(Mutex::new(HashMap::new())),
             b2r_cache: Arc::new(Mutex::new(HashMap::new())),
             r2b_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
-    pub fn add_probe(&mut self, id: u32, get_t_width: u32, put_t_width: u32) {
-        let probe_info = ProbeInfo {
-            id,
-            get_t_width,
-            put_t_width,
-        };
-        self.probe_infos.lock().unwrap().insert(id, probe_info);
-    }
+    // pub fn add_probe(&mut self, id: u32, get_t_width: u32, put_t_width: u32) {
+    //     let probe_info = ProbeInfo {
+    //         id,
+    //         get_t_width,
+    //         put_t_width,
+    //     };
+    //     self.probe_infos.lock().unwrap().insert(id, probe_info);
+    // }
+
+    /// Start a thread to run the server. 
+    /// Create a UnixListener at "/tmp/b2rr2b". 
+    /// Return the JoinHandle of that thread.
+    /// This function needs to be called before running your Bluesim program.
     pub fn serve(&mut self) -> JoinHandle<()> {
-        let _probe_infos = self.probe_infos.clone();
+        // let probe_infos = self.probe_infos.clone();
         let b2r_cache = self.b2r_cache.clone();
         let r2b_cache = self.r2b_cache.clone();
         thread::spawn(move || {
@@ -79,7 +89,7 @@ impl B2RServer {
                 };
                 match message {
                     GetPutMessage::Get(id) => {
-                        println!("receive get from id {}", id);
+                        // println!("receive get from id {}", id);
                         loop {
                             let mut r2b_cache = r2b_cache.lock().unwrap();
                             if let Some(queue) = r2b_cache.get_mut(&id) {
@@ -94,7 +104,7 @@ impl B2RServer {
                         }
                     }
                     GetPutMessage::Put(b2r_message) => {
-                        println!("receive put to id {}", b2r_message.id);
+                        // println!("receive put to id {}", b2r_message.id);
                         let mut b2r_cache = b2r_cache.lock().unwrap();
                         let queue = b2r_cache
                             .entry(b2r_message.id)
@@ -106,12 +116,14 @@ impl B2RServer {
         })
     }
 
-    pub fn get(&self, id: u32) -> Option<B2RMessage> {
+    /// Return the earliest message from the probe with id.
+    /// This function will block until there is a message available for retrieval.
+    pub fn get(&self, id: u32) -> B2RMessage {
         loop {
             let mut b2r_cache = self.b2r_cache.lock().unwrap();
             if let Some(queue) = b2r_cache.get_mut(&id) {
                 if let Some(b2r_message) = queue.pop_front() {
-                    return Some(b2r_message);
+                    return b2r_message;
                 }
             }
             drop(b2r_cache);
@@ -119,6 +131,8 @@ impl B2RServer {
         }
     }
 
+    /// Return the earliest message from the probe with id.
+    /// This function will return None if there is no message available for retrieval.
     pub fn try_get(&self, id: u32) -> Option<B2RMessage> {
         let mut b2r_cache = self.b2r_cache.lock().unwrap();
         if let Some(queue) = b2r_cache.get_mut(&id) {
@@ -129,6 +143,9 @@ impl B2RServer {
         None
     }
 
+    /// Send a message to the probe with ID "id". 
+    /// Please ensure that message.len() == ceil(get_t_width/8), 
+    /// where get_t_width is the width of get_t defined in your BSV code.
     pub fn put(&mut self, id: u32, message: Vec<u8>) {
         let r2b_message = R2BMessage { id, message };
         let mut r2b_cache = self.r2b_cache.lock().unwrap();
@@ -136,6 +153,8 @@ impl B2RServer {
         queue.push_back(r2b_message);
     }
 
+    /// Get all the messages sent by the earliest cycle. 
+    /// If there are no messages available, it will return an empty Vec.
     pub fn get_cycle_message(&mut self) -> Vec<B2RMessage> {
         let mut min_cycles = u32::MAX;
         let mut messages: Vec<B2RMessage> = Vec::new();
@@ -157,6 +176,7 @@ impl B2RServer {
         messages
     }
 
+    /// Get all message send by the probe with id.
     pub fn get_id_all(&mut self, id: u32) -> Vec<B2RMessage> {
         let mut b2r_cache = self.b2r_cache.lock().unwrap();
         let mut messages: Vec<B2RMessage> = Vec::new();

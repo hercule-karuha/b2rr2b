@@ -1,3 +1,7 @@
+// a ten stage pipeline 
+// add 1 to the input in each stage
+// will stuck at stage5 if data is 32'h5c
+
 import RProbe::*;
 import FIFOF::*;
 import Vector::*;

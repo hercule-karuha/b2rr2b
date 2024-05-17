@@ -13,7 +13,7 @@ fn main() {
 
     let handlle = server.serve();
 
-    thread::sleep(Duration::from_secs(10));
+    thread::sleep(Duration::from_secs(5));
 
     let mut cycles: u32 = u32::MAX;
     let mut fire_messages: Vec<Vec<B2RMessage>> = Vec::new();
