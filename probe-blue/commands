@@ -1,2 +1,0 @@
-bsc -u -sim -bdir build -simdir build RProbe.bsv
-bsc -sim -e mkTb  -bdir build -simdir build -o hello.out

@@ -3,3 +3,5 @@
 /probe-blue/build/
 **/target/
 **.out**
+command
+log
