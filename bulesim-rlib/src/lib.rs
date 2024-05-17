@@ -4,7 +4,8 @@
 use rb_link::{B2RMessage, GetPutMessage};
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
-
+/// # Safety
+/// This function should not be called by Rust code.
 /// Get data from your rust program.
 /// called by RProbe::get_data()
 #[no_mangle]
@@ -33,6 +34,8 @@ pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32)
         .expect("Failed to read from stream");
 }
 
+/// # Safety
+/// This function should not be called by Rust code.
 /// Put data to your rust program.
 /// called by RProbe::put_data()
 #[no_mangle]
