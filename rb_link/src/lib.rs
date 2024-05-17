@@ -49,6 +49,12 @@ pub struct B2RServer {
     r2b_cache: Arc<Mutex<HashMap<u32, VecDeque<R2BMessage>>>>,
 }
 
+impl Default for B2RServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl B2RServer {
     /// make a new server
     pub fn new() -> B2RServer {
@@ -67,8 +73,8 @@ impl B2RServer {
     //     self.probe_infos.lock().unwrap().insert(id, probe_info);
     // }
 
-    /// Start a thread to run the server. 
-    /// Create a UnixListener at "/tmp/b2rr2b". 
+    /// Start a thread to run the server.
+    /// Create a UnixListener at "/tmp/b2rr2b".
     /// Return the JoinHandle of that thread.
     /// This function needs to be called before running your Bluesim program.
     pub fn serve(&mut self) -> JoinHandle<()> {
@@ -143,8 +149,8 @@ impl B2RServer {
         None
     }
 
-    /// Send a message to the probe with ID "id". 
-    /// Please ensure that message.len() == ceil(get_t_width/8), 
+    /// Send a message to the probe with ID "id".
+    /// Please ensure that message.len() == ceil(get_t_width/8),
     /// where get_t_width is the width of get_t defined in your BSV code.
     pub fn put(&mut self, id: u32, message: Vec<u8>) {
         let r2b_message = R2BMessage { id, message };
@@ -153,7 +159,7 @@ impl B2RServer {
         queue.push_back(r2b_message);
     }
 
-    /// Get all the messages sent by the earliest cycle. 
+    /// Get all the messages sent by the earliest cycle.
     /// If there are no messages available, it will return an empty Vec.
     pub fn get_cycle_message(&mut self) -> Vec<B2RMessage> {
         let mut min_cycles = u32::MAX;
@@ -190,6 +196,8 @@ impl B2RServer {
     }
 }
 
+
+
 fn get_msg_size(bytes: Vec<u8>) -> u32 {
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
 }
@@ -202,9 +210,9 @@ fn receive_getput(stream: &mut UnixStream) -> Result<GetPutMessage, Box<bincode:
         .expect("Failed to read from stream");
     let sz_msg: usize = get_msg_size(sz_buf) as usize;
     let mut buffer = vec![0; sz_msg];
-    let _ = stream
+    stream
         .read_exact(&mut buffer)
         .expect("Failed to read from stream");
     // println!("sz_msg is {}", sz_msg);
-    return bincode::deserialize::<GetPutMessage>(&buffer);
+    bincode::deserialize::<GetPutMessage>(&buffer)
 }
