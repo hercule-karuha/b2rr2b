@@ -196,8 +196,6 @@ impl B2RServer {
     }
 }
 
-
-
 fn get_msg_size(bytes: Vec<u8>) -> u32 {
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
 }

@@ -1,5 +1,5 @@
 //! The Rust library called by bluesim.
-//! If you want to use RProbe in your bluespec project, 
+//! If you want to use RProbe in your bluespec project,
 //! please compile this crate into an .a file and then link it to your bluesim executable.
 use rb_link::{B2RMessage, GetPutMessage};
 use std::io::{Read, Write};
