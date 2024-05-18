@@ -9,9 +9,8 @@ fn test_get() {
     let _ = server.serve();
     let data: u64 = 114514;
 
-    thread::sleep(Duration::from_secs(1));
-
     put(114, 514, data.to_le_bytes().to_vec());
+
     let msg = server.get(114);
     assert_eq!(msg.id, 114);
     assert_eq!(msg.cycles, 514);
@@ -20,6 +19,7 @@ fn test_get() {
 
     let data_vec: Vec<u8> = vec![0x00, 0x11, 0x5c, 0x33, 0x23];
     put(0, 0, data_vec);
+
     let msg = server.get(0);
     assert_eq!(msg.message[3], 0x33);
     drop(server);
@@ -32,9 +32,8 @@ fn test_try_get() {
     let _ = server.serve();
     let data: u64 = 114514;
 
-    thread::sleep(Duration::from_secs(1));
-
     put(114, 514, data.to_le_bytes().to_vec());
+
     let msg = server.try_get(114).unwrap();
     assert_eq!(msg.id, 114);
     assert_eq!(msg.cycles, 514);
@@ -47,15 +46,12 @@ fn test_try_get() {
     drop(server);
 }
 
-
 #[test]
 fn test_get_cycle() {
     let mut server = B2RServer::new();
 
     let _ = server.serve();
     let data: u64 = 114514;
-
-    thread::sleep(Duration::from_secs(1));
 
     put(0, 0, data.to_le_bytes().to_vec());
     put(0, 1, data.to_le_bytes().to_vec());
@@ -64,6 +60,7 @@ fn test_get_cycle() {
     put(3, 0, data.to_le_bytes().to_vec());
     put(7, 0, data.to_le_bytes().to_vec());
     put(12, 1, data.to_le_bytes().to_vec());
+
     let msgs = server.get_cycle_message();
     assert_eq!(msgs.len(), 4);
     drop(server);
@@ -77,7 +74,7 @@ fn u64_from_vec(bytes: Vec<u8>) -> u64 {
 
 pub fn put(id: u32, cycles: u32, data: Vec<u8>) {
     // println!("send put");
-
+    thread::sleep(Duration::from_micros(100));
     let socket_path = String::from("/tmp/b2rr2b");
     let mut stream = UnixStream::connect(socket_path).expect("Failed to connect to socket");
     let b2r_message = B2RMessage {
@@ -98,4 +95,5 @@ pub fn put(id: u32, cycles: u32, data: Vec<u8>) {
     stream
         .write_all(&serialized)
         .expect("Failed to write to stream");
+    thread::sleep(Duration::from_micros(100));
 }
