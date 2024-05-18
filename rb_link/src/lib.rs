@@ -112,9 +112,7 @@ impl B2RServer {
                     GetPutMessage::Put(b2r_message) => {
                         // println!("receive put to id {}", b2r_message.id);
                         let mut b2r_cache = b2r_cache.lock().unwrap();
-                        let queue = b2r_cache
-                            .entry(b2r_message.id)
-                            .or_insert_with(VecDeque::new);
+                        let queue = b2r_cache.entry(b2r_message.id).or_default();
                         queue.push_back(b2r_message);
                     }
                 }
@@ -155,7 +153,7 @@ impl B2RServer {
     pub fn put(&mut self, id: u32, message: Vec<u8>) {
         let r2b_message = R2BMessage { id, message };
         let mut r2b_cache = self.r2b_cache.lock().unwrap();
-        let queue = r2b_cache.entry(id).or_insert_with(VecDeque::new);
+        let queue = r2b_cache.entry(id).or_default();
         queue.push_back(r2b_message);
     }
 
