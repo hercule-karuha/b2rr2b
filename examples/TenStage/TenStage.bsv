@@ -37,72 +37,72 @@ module mkAdderPipeline(Empty);
     endrule
 
     rule stage1;
-        Bit#(32) data = recv_probe.get_data();
+        Bit#(32) data = recv_probe.get_data;
         fire_probes[0].put_data(True);
         fifos[0].enq(data);
     endrule
 
     rule stage2;
-        Bit#(32) data = fifos[0].first();
-        fifos[0].deq();
+        Bit#(32) data = fifos[0].first;
+        fifos[0].deq;
         fire_probes[1].put_data(True);
         fifos[1].enq(data + 1);
     endrule
 
     rule stage3;
-        Bit#(32) data = fifos[1].first();
-        fifos[1].deq();
+        Bit#(32) data = fifos[1].first;
+        fifos[1].deq;
         fire_probes[2].put_data(True);
         fifos[2].enq(data + 1);
     endrule
 
     rule stage4;
-        Bit#(32) data = fifos[2].first();
-        fifos[2].deq();
+        Bit#(32) data = fifos[2].first;
+        fifos[2].deq;
         fire_probes[3].put_data(True);
         fifos[3].enq(data + 1);
     endrule
     
     rule stage5;
-        Bit#(32) data = fifos[3].first();
+        Bit#(32) data = fifos[3].first;
         if(data != 32'h5c) begin
-            fifos[3].deq();
+            fifos[3].deq;
             fire_probes[4].put_data(True);
             fifos[4].enq(data + 1);
         end
     endrule
     
     rule stage6;
-        Bit#(32) data = fifos[4].first();
-        fifos[4].deq();
+        Bit#(32) data = fifos[4].first;
+        fifos[4].deq;
         fire_probes[5].put_data(True);
         fifos[5].enq(data + 1);
     endrule
     
     rule stage7;
-        Bit#(32) data = fifos[5].first();
-        fifos[5].deq();
+        Bit#(32) data = fifos[5].first;
+        fifos[5].deq;
         fire_probes[6].put_data(True);
         fifos[6].enq(data + 1);
     endrule
     
     rule stage8;
-        Bit#(32) data = fifos[6].first();
-        fifos[6].deq();
+        Bit#(32) data = fifos[6].first;
+        fifos[6].deq;
         fire_probes[7].put_data(True);
         fifos[7].enq(data + 1);
     endrule
     
     rule stage9;    
-        Bit#(32) data = fifos[7].first();
-        fifos[7].deq();
+        Bit#(32) data = fifos[7].first;
+        fifos[7].deq;
         fire_probes[8].put_data(True);
         fifos[8].enq(data + 1);
     endrule
 
     rule stage10;
-        Bit#(32) data = fifos[8].first();
-        fifos[8].deq();
+        Bit#(32) data = fifos[8].first;
+        fifos[8].deq;
         $display("data after pipeline: %x", data);
     endrule
 endmodule

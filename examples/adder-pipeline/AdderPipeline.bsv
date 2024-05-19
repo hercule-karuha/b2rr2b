@@ -11,7 +11,7 @@ module mkAdderPipeline(Empty);
 
 
     rule doGet if (fetch_times < 10);
-        Bit#(32) data = probe.get_data();
+        Bit#(32) data = probe.get_data;
         f2d.enq(data);
         fetch_times <= fetch_times + 1;
     endrule
