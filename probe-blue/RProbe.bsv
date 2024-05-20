@@ -1,5 +1,8 @@
-import "BDPI" function Bit#(n) get(Bit#(32) id, Bit#(32) cycles, Bit#(32) size);
-import "BDPI" function Action put(Bit#(32) id, Bit#(32) cycles, Bit#(n) data, Bit#(32) size);
+WORD_WIDTH 8 BYTE_WIDTH;
+typedef 32 WORD_WIDTH;
+
+import "BDPI" function Bit#(n) get(Bit#(WORD_WIDTH) id, Bit#(WORD_WIDTH) cycles, Bit#(WORD_WIDTH) size);
+import "BDPI" function Action put(Bit#(WORD_WIDTH) id, Bit#(WORD_WIDTH) cycles, Bit#(n) data, Bit#(WORD_WIDTH) size);
 
 
 interface RProbe#(type get_t, type put_t);
@@ -7,11 +10,11 @@ interface RProbe#(type get_t, type put_t);
     method Action put_data(put_t data);
 endinterface
 
-module mkRProbe#(Bit#(32) id)(RProbe#(get_t, put_t)) provisos(Bits#(get_t, wid_get), Bits#(put_t, wid_put));
-    Bit#(32) get_size = fromInteger(valueOf(TDiv#(wid_get,8)));
-    Bit#(32) put_size = fromInteger(valueOf(TDiv#(wid_put,8)));
+module mkRProbe#(Bit#(WORD_WIDTH) id)(RProbe#(get_t, put_t)) provisos(Bits#(get_t, wid_get), Bits#(put_t, wid_put));
+    Bit#(WORD_WIDTH) get_size = fromInteger(valueOf(TDiv#(wid_get, BYTE_WIDTH)));
+    Bit#(WORD_WIDTH) put_size = fromInteger(valueOf(TDiv#(wid_put, BYTE_WIDTH)));
 
-    Reg#(Bit#(32)) cycles <- mkReg(0);
+    Reg#(Bit#(WORD_WIDTH)) cycles <- mkReg(0);
 
     rule count;
         cycles <= cycles + 1;
