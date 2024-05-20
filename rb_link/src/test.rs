@@ -1,7 +1,8 @@
 use super::*;
+use std::io::Write;
 use std::thread;
 use std::time::Duration;
-
+use std::os::unix::net::UnixStream;
 #[test]
 fn test_get() {
     let mut server = B2RServer::new();
