@@ -1,4 +1,6 @@
 //! A Rust library for interacting with the Bluesim simulation program.
+#![warn(clippy::unwrap_used)]
+
 #[cfg(test)]
 mod test;
 

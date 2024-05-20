@@ -1,6 +1,7 @@
 //! The Rust library called by bluesim.
 //! If you want to use RProbe in your bluespec project,
 //! please compile this crate into an .a file and then link it to your bluesim executable.
+#![warn(clippy::unwrap_used)]
 use rb_link::{B2RMessage, GetPutMessage, MsgSizeType, MSG_SIZE_BYTES};
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
@@ -22,7 +23,7 @@ pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32)
     let mut stream = STREAM.get_or_init(|| {
         UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket")
     });
-    
+
     let get_message = GetPutMessage::Get(id);
     let serialized = bincode::serialize(&get_message).expect("Serialization failed");
 

@@ -1,3 +1,4 @@
+use crate::config::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Write};
@@ -6,7 +7,6 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use std::{fs, usize};
-use crate::config::*;
 
 #[derive(Serialize, Deserialize)]
 pub enum GetPutMessage {
@@ -34,7 +34,6 @@ pub struct B2RMessage {
 /// A server for interacting with Bluesim.
 /// Cache bidirectional data and send data upon receiving requests.
 pub struct B2RServer {
-    // probe_infos: Arc<Mutex<HashMap<u32, ProbeInfo>>>,
     b2r_cache: Arc<Mutex<HashMap<u32, VecDeque<B2RMessage>>>>,
     r2b_cache: Arc<Mutex<HashMap<u32, VecDeque<R2BMessage>>>>,
 }
@@ -66,34 +65,30 @@ impl B2RServer {
         thread::spawn(move || {
             let _ = fs::remove_file("/tmp/b2rr2b");
             let listener = UnixListener::bind("/tmp/b2rr2b").expect("Failed to bind Unix listener");
-            for stream in listener.incoming() {
-                let mut stream = match stream {
-                    Ok(stream) => stream,
-                    Err(_) => todo!(),
-                };
-                let message = match receive_getput(&mut stream) {
-                    Ok(m) => m,
-                    Err(_) => todo!(),
-                };
+            let mut stream = match listener.incoming().next() {
+                Some(stream_res) => stream_res.expect("Fail to connect to bluesim"),
+                None => panic!("listener returns a None"),
+            };
+            loop {
+                let message = receive_getput(&mut stream).expect("Fail to deserialize the message");
                 match message {
                     GetPutMessage::Get(id) => {
                         // println!("receive get from id {}", id);
                         loop {
-                            let mut r2b_cache = r2b_cache.lock().unwrap();
+                            let mut r2b_cache = r2b_cache.lock().expect("Fail to lock r2b_cache");
                             if let Some(queue) = r2b_cache.get_mut(&id) {
                                 if let Some(r2b_message) = queue.pop_front() {
-                                    stream.write_all(&r2b_message.message).unwrap();
+                                    stream.write_all(&r2b_message.message).expect("Fail to write to socket");
                                     drop(r2b_cache);
                                     break;
                                 }
                             }
                             drop(r2b_cache);
-                            thread::sleep(Duration::from_millis(100));
                         }
                     }
                     GetPutMessage::Put(b2r_message) => {
                         // println!("receive put to id {}", b2r_message.id);
-                        let mut b2r_cache = b2r_cache.lock().unwrap();
+                        let mut b2r_cache = b2r_cache.lock().expect("Fail to lock b2r_cache");
                         let queue = b2r_cache.entry(b2r_message.id).or_default();
                         queue.push_back(b2r_message);
                     }
@@ -106,7 +101,7 @@ impl B2RServer {
     /// This function will block until there is a message available for retrieval.
     pub fn get(&self, id: u32) -> B2RMessage {
         loop {
-            let mut b2r_cache = self.b2r_cache.lock().unwrap();
+            let mut b2r_cache = self.b2r_cache.lock().expect("Fail to lock b2r_cache");
             if let Some(queue) = b2r_cache.get_mut(&id) {
                 if let Some(b2r_message) = queue.pop_front() {
                     return b2r_message;
@@ -120,7 +115,7 @@ impl B2RServer {
     /// Return the earliest message from the probe with id.
     /// This function will return None if there is no message available for retrieval.
     pub fn try_get(&self, id: u32) -> Option<B2RMessage> {
-        let mut b2r_cache = self.b2r_cache.lock().unwrap();
+        let mut b2r_cache = self.b2r_cache.lock().expect("Fail to lock b2r_cache");
         if let Some(queue) = b2r_cache.get_mut(&id) {
             if let Some(b2r_message) = queue.pop_front() {
                 return Some(b2r_message);
@@ -134,7 +129,7 @@ impl B2RServer {
     /// where get_t_width is the width of get_t defined in your BSV code.
     pub fn put(&mut self, id: u32, message: Vec<u8>) {
         let r2b_message = R2BMessage { id, message };
-        let mut r2b_cache = self.r2b_cache.lock().unwrap();
+        let mut r2b_cache = self.r2b_cache.lock().expect("Fail to lock r2b_cache");
         let queue = r2b_cache.entry(id).or_default();
         queue.push_back(r2b_message);
     }
@@ -144,7 +139,7 @@ impl B2RServer {
     pub fn get_cycle_message(&mut self) -> Vec<B2RMessage> {
         let mut min_cycles = u32::MAX;
         let mut messages: Vec<B2RMessage> = Vec::new();
-        let mut b2r_cache = self.b2r_cache.lock().unwrap();
+        let mut b2r_cache = self.b2r_cache.lock().expect("Fail to lock b2r_cache");
         for queue in b2r_cache.values() {
             if let Some(b2r_message) = queue.front() {
                 if b2r_message.cycles < min_cycles {
@@ -155,7 +150,7 @@ impl B2RServer {
         for queue in b2r_cache.values_mut() {
             if let Some(b2r_message) = queue.front() {
                 if b2r_message.cycles == min_cycles {
-                    messages.push(queue.pop_front().unwrap());
+                    messages.push(queue.pop_front().expect("front error"));
                 }
             }
         }
@@ -164,7 +159,7 @@ impl B2RServer {
 
     /// Get all message send by the probe with id.
     pub fn get_id_all(&mut self, id: u32) -> Vec<B2RMessage> {
-        let mut b2r_cache = self.b2r_cache.lock().unwrap();
+        let mut b2r_cache = self.b2r_cache.lock().expect("Fail to lock b2r_cache");
         let mut messages: Vec<B2RMessage> = Vec::new();
 
         if let Some(queue) = b2r_cache.get_mut(&id) {
