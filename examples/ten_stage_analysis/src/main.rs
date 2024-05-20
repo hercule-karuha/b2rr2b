@@ -3,7 +3,7 @@ use std::thread;
 use std::time::Duration;
 // a ten stage pipeline analyzer
 fn main() {
-    let mut input_data: Vec<u32> = (1..200).collect();
+    let input_data: Vec<u32> = (1..200).collect();
 
     let mut server = B2RServer::new();
 
@@ -25,8 +25,9 @@ fn main() {
             cycles = e_f_msg.first().unwrap().cycles;
             fire_messages.push(f_msg);
             e_f_messages.push(e_f_msg);
-        } else if f_msg.len() < fire_messages.last().unwrap().len() { // if rules fired in cycles i + 1 < fired in cycles i
-            cycles = e_f_msg.first().unwrap().cycles;                 // means the pipeline is stucked
+        } else if f_msg.len() < fire_messages.last().unwrap().len() {
+            // if rules fired in cycles i + 1 < fired in cycles i
+            cycles = e_f_msg.first().unwrap().cycles; // means the pipeline is stucked
             println!("pipeline stuck at cycle: {} !!!", cycles);
             e_f_messages.push(e_f_msg);
             stuck_msg = f_msg;
@@ -57,7 +58,7 @@ fn divide_message(cycle_messages: Vec<B2RMessage>) -> (Vec<B2RMessage>, Vec<B2RM
     let mut fire_message: Vec<B2RMessage> = Vec::new();
     let mut e_f_message: Vec<B2RMessage> = Vec::new();
     for msg in cycle_messages {
-        if msg.id >= 0 && msg.id <= 8 {
+        if msg.id <= 8 {
             e_f_message.push(msg);
         } else if msg.id >= 10 && msg.id <= 18 {
             fire_message.push(msg);

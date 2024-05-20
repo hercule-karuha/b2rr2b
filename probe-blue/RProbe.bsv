@@ -1,4 +1,4 @@
-WORD_WIDTH 8 BYTE_WIDTH;
+typedef 8 BYTE_WIDTH;
 typedef 32 WORD_WIDTH;
 
 import "BDPI" function Bit#(n) get(Bit#(WORD_WIDTH) id, Bit#(WORD_WIDTH) cycles, Bit#(WORD_WIDTH) size);

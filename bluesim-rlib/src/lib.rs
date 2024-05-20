@@ -70,8 +70,8 @@ pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32)
     // The initial 4-byte data specifies the byte count of the message in the u32 format.
     let msg_size = serialized.len() as MsgSizeType;
     let mut msg_with_size = Vec::with_capacity(MSG_SIZE_BYTES + serialized.len());
-    msg_with_size.extend(serialized.iter());
     msg_with_size.extend_from_slice(msg_size.to_le_bytes().as_slice());
+    msg_with_size.extend(serialized.iter());
 
     stream
         .write_all(&msg_with_size)

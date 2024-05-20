@@ -2,6 +2,7 @@
 #![warn(clippy::unwrap_used)]
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test;
 
 mod config;
