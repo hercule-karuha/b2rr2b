@@ -58,7 +58,7 @@ impl B2RServer {
             r2b_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
-    
+
     /// Start a thread to run the server.
     /// Create a UnixListener at "/tmp/b2rr2b".
     /// Return the JoinHandle of that thread.
