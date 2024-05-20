@@ -78,7 +78,9 @@ impl B2RServer {
                             let mut r2b_cache = r2b_cache.lock().expect("Fail to lock r2b_cache");
                             if let Some(queue) = r2b_cache.get_mut(&id) {
                                 if let Some(r2b_message) = queue.pop_front() {
-                                    stream.write_all(&r2b_message.message).expect("Fail to write to socket");
+                                    stream
+                                        .write_all(&r2b_message.message)
+                                        .expect("Fail to write to socket");
                                     drop(r2b_cache);
                                     break;
                                 }

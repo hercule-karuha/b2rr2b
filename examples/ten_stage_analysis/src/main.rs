@@ -1,7 +1,7 @@
 use rb_link::*;
 use std::thread;
 use std::time::Duration;
-
+// a ten stage pipeline analyzer
 fn main() {
     let mut input_data: Vec<u32> = (1..200).collect();
 
@@ -25,8 +25,8 @@ fn main() {
             cycles = e_f_msg.first().unwrap().cycles;
             fire_messages.push(f_msg);
             e_f_messages.push(e_f_msg);
-        } else if f_msg.len() < fire_messages.last().unwrap().len() {
-            cycles = e_f_msg.first().unwrap().cycles;
+        } else if f_msg.len() < fire_messages.last().unwrap().len() { // if rules fired in cycles i + 1 < fired in cycles i
+            cycles = e_f_msg.first().unwrap().cycles;                 // means the pipeline is stucked
             println!("pipeline stuck at cycle: {} !!!", cycles);
             e_f_messages.push(e_f_msg);
             stuck_msg = f_msg;
