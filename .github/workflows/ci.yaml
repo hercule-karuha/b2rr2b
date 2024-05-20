@@ -24,7 +24,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build rlib
-        run: cd bulesim-rlib && cargo b --workspace --all-targets --all-features
+        run: cd bluesim-rlib && cargo b --workspace --all-targets --all-features
 
       - name: Build rb_link
         run: cd rb_link && cargo b --workspace --all-targets --all-features
@@ -43,7 +43,7 @@ jobs:
           components: rustfmt
 
       - name: Rustfmt Check rlib
-        run: cd bulesim-rlib && cargo fmt --all --check
+        run: cd bluesim-rlib && cargo fmt --all --check
 
       - name: Rustfmt Check rb_link
         run: cd rb_link && cargo fmt --all --check
@@ -62,7 +62,7 @@ jobs:
           components: clippy
 
       - name: Clippy Check rlib
-        run: cd bulesim-rlib && cargo clippy --workspace --all-targets --all-features -- -Dwarnings 
+        run: cd bluesim-rlib && cargo clippy --workspace --all-targets --all-features -- -Dwarnings 
 
       - name: Clippy Check rb_link
         run: cd rb_link && cargo clippy --workspace --all-targets --all-features -- -Dwarnings 

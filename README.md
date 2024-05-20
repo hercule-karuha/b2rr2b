@@ -53,7 +53,7 @@ $ cd bluesim-rilb
 $ cargo build
 $ cd <your bsv projest path>
 // add the .a file after the link command
-$ <your link command> ../../bulesim-rlib/target/debug/libblue.a
+$ <your link command> ../../bluesim-rlib/target/debug/libblue.a
 ```
 
 Next, write your Rust code for analyzing the data.

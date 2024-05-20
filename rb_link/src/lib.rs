@@ -18,12 +18,6 @@ pub enum GetPutMessage {
     Put(B2RMessage),
 }
 
-// pub struct ProbeInfo {
-//     id: u32,
-//     get_t_width: u32,
-//     put_t_width: u32,
-// }
-
 #[derive(Serialize, Deserialize)]
 struct R2BMessage {
     id: u32,
@@ -64,15 +58,7 @@ impl B2RServer {
             r2b_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
-    // pub fn add_probe(&mut self, id: u32, get_t_width: u32, put_t_width: u32) {
-    //     let probe_info = ProbeInfo {
-    //         id,
-    //         get_t_width,
-    //         put_t_width,
-    //     };
-    //     self.probe_infos.lock().unwrap().insert(id, probe_info);
-    // }
-
+    
     /// Start a thread to run the server.
     /// Create a UnixListener at "/tmp/b2rr2b".
     /// Return the JoinHandle of that thread.
