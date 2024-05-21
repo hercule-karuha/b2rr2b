@@ -20,6 +20,9 @@ pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32)
     if res_ptr.is_null() {
         panic!("res_ptr is a null pointer!");
     }
+    if _cycles == u32::MAX {
+        panic!("cycles over flow!");
+    }
     let mut stream = STREAM.get_or_init(|| {
         UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket")
     });
@@ -52,6 +55,9 @@ pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32)
     // check the ptr is not null
     if data_ptr.is_null() {
         panic!("data_ptr is a null pointer!");
+    }
+    if cycles == u32::MAX {
+        panic!("cycles over flow!");
     }
 
     let mut stream = STREAM.get_or_init(|| {

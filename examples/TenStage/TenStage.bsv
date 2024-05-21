@@ -6,35 +6,18 @@ import RProbe::*;
 import FIFOF::*;
 import Vector::*;
 
-function Bit#(16) gen_e_f(Bool full, Bool empty);
-    Bit#(8) full8 = full ? 1 : 0;
-    Bit#(8) empty8 = empty ? 1 : 0;
-    return {empty8, full8};
-endfunction
-
-
 (* synthesize *)
 module mkAdderPipeline(Empty);
-    function gen_e_f_probe(Integer x) = mkRProbe(fromInteger(x));
     function gen_fire_probes(Integer x) = mkRProbe(fromInteger(x + 10));
 
     Vector#(9, FIFOF#(Bit#(32))) fifos <- replicateM(mkSizedFIFOF(5));
-    Vector#(9, RProbe#(Bool, Bit#(16))) e_f_probes <- genWithM(gen_e_f_probe);
+
+    function gen_e_f_probe(Integer x) = mkFIFOFProbe(fromInteger(x), fifos[fromInteger(x)]);
+    Vector#(9, Empty) e_f_probes <- genWithM(gen_e_f_probe);
+
     Vector#(9, RProbe#(Bool, Bool)) fire_probes <- genWithM(gen_fire_probes);
 
     RProbe#(Bit#(32), Bit#(32)) recv_probe <- mkRProbe(20);
-
-    rule send_ef;
-        e_f_probes[0].put_data(gen_e_f(!fifos[0].notFull(), !fifos[0].notEmpty()));
-        e_f_probes[1].put_data(gen_e_f(!fifos[1].notFull(), !fifos[1].notEmpty()));
-        e_f_probes[2].put_data(gen_e_f(!fifos[2].notFull(), !fifos[2].notEmpty()));
-        e_f_probes[3].put_data(gen_e_f(!fifos[3].notFull(), !fifos[3].notEmpty()));
-        e_f_probes[4].put_data(gen_e_f(!fifos[3].notFull(), !fifos[3].notEmpty()));
-        e_f_probes[5].put_data(gen_e_f(!fifos[5].notFull(), !fifos[5].notEmpty()));
-        e_f_probes[6].put_data(gen_e_f(!fifos[6].notFull(), !fifos[6].notEmpty()));
-        e_f_probes[7].put_data(gen_e_f(!fifos[7].notFull(), !fifos[7].notEmpty()));
-        e_f_probes[8].put_data(gen_e_f(!fifos[8].notFull(), !fifos[8].notEmpty()));
-    endrule
 
     rule stage1;
         Bit#(32) data = recv_probe.get_data;

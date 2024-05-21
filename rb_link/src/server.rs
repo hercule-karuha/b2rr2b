@@ -34,8 +34,16 @@ pub struct B2RMessage {
 /// A server for interacting with Bluesim.
 /// Cache bidirectional data and send data upon receiving requests.
 pub struct B2RServer {
+    probe_infos: HashMap<PrbeType, Vec<u32>>,
     b2r_cache: Arc<Mutex<HashMap<u32, VecDeque<B2RMessage>>>>,
     r2b_cache: Arc<Mutex<HashMap<u32, VecDeque<R2BMessage>>>>,
+}
+
+/// Type of The Probe
+/// Fifo: won't get data from rust, sent 2 bytes every cycle, the fist byte is notFull second byte is notEmpty
+#[derive(PartialEq, Eq, Hash)]
+pub enum PrbeType {
+    Fifo,
 }
 
 impl Default for B2RServer {
@@ -48,10 +56,16 @@ impl B2RServer {
     /// make a new server
     pub fn new() -> B2RServer {
         B2RServer {
-            // probe_infos: Arc::new(Mutex::new(HashMap::new())),
+            probe_infos: HashMap::new(),
             b2r_cache: Arc::new(Mutex::new(HashMap::new())),
             r2b_cache: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    // give a type to a probe so that it can be analysis by server.
+    pub fn give_type(&mut self, probe_type: PrbeType, id: u32) {
+        let ids = self.probe_infos.entry(probe_type).or_default();
+        ids.push(id);
     }
 
     /// Start a thread to run the server.
