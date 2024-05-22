@@ -40,7 +40,7 @@ module mkFIFOFProbe#(Bit#(WORD_WIDTH) id, FIFOF#(t) fifo)(Empty);
         return {empty8, full8};
     endfunction
     
-    rule count;
-        e_f_probe.put_data(gen_e_f(!fifo.notFull(), !fifo.notEmpty()));
+    rule send_e_f_info;
+        e_f_probe.put_data(gen_e_f(fifo.notFull(), fifo.notEmpty()));
     endrule
 endmodule

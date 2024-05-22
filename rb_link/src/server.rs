@@ -34,16 +34,30 @@ pub struct B2RMessage {
 /// A server for interacting with Bluesim.
 /// Cache bidirectional data and send data upon receiving requests.
 pub struct B2RServer {
-    probe_infos: HashMap<PrbeType, Vec<u32>>,
+    probe_infos: HashMap<ProbeType, Vec<u32>>,
     b2r_cache: Arc<Mutex<HashMap<u32, VecDeque<B2RMessage>>>>,
     r2b_cache: Arc<Mutex<HashMap<u32, VecDeque<R2BMessage>>>>,
 }
 
 /// Type of The Probe
 /// Fifo: won't get data from rust, sent 2 bytes every cycle, the fist byte is notFull second byte is notEmpty
+/// Fired: won't get data from rust, sent 1 bytes message when the rule fired
 #[derive(PartialEq, Eq, Hash)]
-pub enum PrbeType {
+pub enum ProbeType {
     Fifo,
+    Fired,
+}
+
+/// The pipeline state
+/// cycle: the cycle of the state
+/// full_fifos: the ids of the full fifos
+/// empty_fifos: the ids of the empty fifos
+/// fire_fules: the fired rules
+pub struct PipeLineState {
+    pub cycle: u32,
+    pub full_fifos: Vec<u32>,
+    pub empty_fifos: Vec<u32>,
+    pub fire_rules: Vec<u32>,
 }
 
 impl Default for B2RServer {
@@ -63,9 +77,11 @@ impl B2RServer {
     }
 
     // give a type to a probe so that it can be analysis by server.
-    pub fn give_type(&mut self, probe_type: PrbeType, id: u32) {
+    pub fn give_type(&mut self, probe_type: ProbeType, id: u32) {
         let ids = self.probe_infos.entry(probe_type).or_default();
-        ids.push(id);
+        if !ids.contains(&id) {
+            ids.push(id);
+        }
     }
 
     /// Start a thread to run the server.
@@ -184,6 +200,67 @@ impl B2RServer {
             }
         }
         messages
+    }
+
+    /// Read the earliest cycle messages sent by the probes labeled as "fifo" and "fired", and organize them into a PipeLineState.
+    pub fn get_pipeline_state(&mut self) -> PipeLineState {
+        let mut state: PipeLineState = PipeLineState {
+            cycle: u32::MAX,
+            full_fifos: Vec::new(),
+            empty_fifos: Vec::new(),
+            fire_rules: Vec::new(),
+        };
+        let fifos: &Vec<u32> = self
+            .probe_infos
+            .get(&ProbeType::Fifo)
+            .expect("No fifo probes!");
+        let rules: &Vec<u32> = self
+            .probe_infos
+            .get(&ProbeType::Fired)
+            .expect("No fired probes!");
+        let mut b2r_cache: std::sync::MutexGuard<HashMap<u32, VecDeque<B2RMessage>>> =
+            self.b2r_cache.lock().expect("Fail to lock b2r_cache");
+
+        for fifo_id in fifos {
+            if let Some(messages) = b2r_cache.get(fifo_id) {
+                if let Some(first_message) = messages.front() {
+                    if first_message.cycles < state.cycle {
+                        state.cycle = first_message.cycles;
+                    }
+                }
+            }
+        }
+
+        for fifo_id in fifos {
+            if let Some(messages) = b2r_cache.get_mut(fifo_id) {
+                if let Some(first_message) = messages.front() {
+                    if first_message.cycles == state.cycle {
+                        // the fifo message len must be 2
+                        assert_eq!(first_message.message.len(), 2);
+                        let b2r_message = messages.pop_front().expect("front error");
+                        if b2r_message.message[0] == 0 {
+                            state.full_fifos.push(*fifo_id);
+                        } else if b2r_message.message[1] == 0 {
+                            state.empty_fifos.push(*fifo_id);
+                        }
+                    }
+                }
+            }
+        }
+
+        for rule_id in rules {
+            if let Some(messages) = b2r_cache.get_mut(rule_id) {
+                if let Some(first_message) = messages.front() {
+                    if first_message.cycles == state.cycle {
+                        // the fifo message len must be 2
+                        assert_eq!(first_message.message.len(), 1);
+                        let _ = messages.pop_front().expect("front error");
+                        state.fire_rules.push(*rule_id);
+                    }
+                }
+            }
+        }
+        state
     }
 }
 

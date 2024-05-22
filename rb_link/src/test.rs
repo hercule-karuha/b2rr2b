@@ -98,6 +98,85 @@ fn test_deserialize_fail() {
     assert!(join_res.is_err());
 }
 
+#[test]
+fn test_get_get_pipeline_state() {
+    let mut server = B2RServer::new();
+    for i in 0..4 {
+        let id: u32 = i;
+        server.give_type(ProbeType::Fifo, id);
+    }
+    for i in 10..15 {
+        let id: u32 = i;
+        server.give_type(ProbeType::Fired, id);
+    }
+
+    let _ = server.serve();
+    thread::sleep(Duration::from_micros(100));
+    let mut stream =
+        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+    let full_msg = vec![0, 1];
+    let empty_msg = vec![1, 0];
+    let not_full_empty = vec![1, 1];
+
+    put(0, 0, empty_msg.clone(), &mut stream);
+    put(1, 0, not_full_empty.clone(), &mut stream);
+    put(2, 0, not_full_empty.clone(), &mut stream);
+    put(3, 0, full_msg.clone(), &mut stream);
+
+    put(10, 0, vec![1], &mut stream);
+    put(12, 0, vec![1], &mut stream);
+    put(14, 0, vec![1], &mut stream);
+
+    thread::sleep(Duration::from_micros(100));
+    let state = server.get_pipeline_state();
+
+    assert_eq!(state.cycle, 0);
+    assert_eq!(state.empty_fifos.len(), 1);
+    assert_eq!(state.full_fifos.len(), 1);
+    assert_eq!(state.fire_rules.len(), 3);
+    assert_eq!(state.empty_fifos[0], 0);
+    assert_eq!(state.full_fifos[0], 3);
+    assert!(state.fire_rules.contains(&10));
+    assert!(state.fire_rules.contains(&12));
+    assert!(state.fire_rules.contains(&14));
+}
+
+#[test]
+#[should_panic]
+fn test_probe_type_error() {
+    let mut server = B2RServer::new();
+
+    server.give_type(ProbeType::Fifo, 0);
+    server.give_type(ProbeType::Fired, 0);
+
+    let _ = server.serve();
+    thread::sleep(Duration::from_micros(100));
+    let mut stream =
+        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+
+    put(0, 0, vec![0, 0, 0], &mut stream);
+
+    thread::sleep(Duration::from_micros(100));
+    let _state = server.get_pipeline_state();
+}
+
+#[test]
+#[should_panic]
+fn test_no_fifo() {
+    let mut server = B2RServer::new();
+    server.give_type(ProbeType::Fired, 0);
+
+    let _ = server.serve();
+    thread::sleep(Duration::from_micros(100));
+    let mut stream =
+        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+
+    put(0, 0, vec![0, 0, 0], &mut stream);
+
+    thread::sleep(Duration::from_micros(100));
+    let _state = server.get_pipeline_state();
+}
+
 fn u64_from_vec(bytes: Vec<u8>) -> u64 {
     u64::from_le_bytes([
         bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
