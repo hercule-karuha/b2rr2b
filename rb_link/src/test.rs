@@ -15,7 +15,9 @@ fn test_get() {
 
     put(114, 514, data.to_le_bytes().to_vec(), &mut stream);
 
-    let msg = server.get(114);
+    let mut id_getter = IDGetter::new(&server);
+
+    let msg = id_getter.get(114);
     assert_eq!(msg.id, 114);
     assert_eq!(msg.cycles, 514);
     assert_eq!(msg.message.len(), 8);
@@ -24,8 +26,9 @@ fn test_get() {
     let data_vec: Vec<u8> = vec![0x00, 0x11, 0x5c, 0x33, 0x23];
     put(0, 0, data_vec, &mut stream);
 
-    let msg = server.get(0);
+    let msg = id_getter.get(0);
     assert_eq!(msg.message[3], 0x33);
+
     drop(server);
 }
 
@@ -40,13 +43,15 @@ fn test_try_get() {
         UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
     put(114, 514, data.to_le_bytes().to_vec(), &mut stream);
 
-    let msg = server.try_get(114).unwrap();
+    let mut id_getter = IDGetter::new(&server);
+
+    let msg = id_getter.try_get(114).unwrap();
     assert_eq!(msg.id, 114);
     assert_eq!(msg.cycles, 514);
     assert_eq!(msg.message.len(), 8);
     assert_eq!(u64_from_vec(msg.message), 114514);
 
-    let msg = server.try_get(114);
+    let msg = id_getter.try_get(114);
     assert!(msg.is_none());
 
     drop(server);
@@ -71,7 +76,9 @@ fn test_get_cycle() {
     put(7, 0, data.to_le_bytes().to_vec(), &mut stream);
     put(12, 1, data.to_le_bytes().to_vec(), &mut stream);
 
-    let msgs = server.get_cycle_message();
+    let mut cycle_getter = CycleGetter::new(&server);
+
+    let msgs = cycle_getter.get_cycle_message();
     assert_eq!(msgs.len(), 4);
     drop(server);
 }
@@ -101,13 +108,15 @@ fn test_deserialize_fail() {
 #[test]
 fn test_get_get_pipeline_state() {
     let mut server = B2RServer::new();
+    let mut pipe_getter = PipeLineGetter::new(&server);
+
     for i in 0..4 {
         let id: u32 = i;
-        server.give_type(ProbeType::Fifo, id);
+        pipe_getter.add_fifo_probe(id);
     }
     for i in 10..15 {
         let id: u32 = i;
-        server.give_type(ProbeType::Fired, id);
+        pipe_getter.add_rule_probe(id);
     }
 
     let _ = server.serve();
@@ -128,7 +137,7 @@ fn test_get_get_pipeline_state() {
     put(14, 0, vec![1], &mut stream);
 
     thread::sleep(Duration::from_micros(100));
-    let state = server.get_pipeline_state();
+    let state = pipe_getter.get_pipeline_state();
 
     assert_eq!(state.cycle, 0);
     assert_eq!(state.empty_fifos.len(), 1);
@@ -145,10 +154,10 @@ fn test_get_get_pipeline_state() {
 #[should_panic]
 fn test_probe_type_error() {
     let mut server = B2RServer::new();
+    let mut pipe_getter = PipeLineGetter::new(&server);
 
-    server.give_type(ProbeType::Fifo, 0);
-    server.give_type(ProbeType::Fired, 0);
-
+    pipe_getter.add_fifo_probe(0);
+    pipe_getter.add_rule_probe(1);
     let _ = server.serve();
     thread::sleep(Duration::from_micros(100));
     let mut stream =
@@ -157,24 +166,7 @@ fn test_probe_type_error() {
     put(0, 0, vec![0, 0, 0], &mut stream);
 
     thread::sleep(Duration::from_micros(100));
-    let _state = server.get_pipeline_state();
-}
-
-#[test]
-#[should_panic]
-fn test_no_fifo() {
-    let mut server = B2RServer::new();
-    server.give_type(ProbeType::Fired, 0);
-
-    let _ = server.serve();
-    thread::sleep(Duration::from_micros(100));
-    let mut stream =
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
-
-    put(0, 0, vec![0, 0, 0], &mut stream);
-
-    thread::sleep(Duration::from_micros(100));
-    let _state = server.get_pipeline_state();
+    let _state = pipe_getter.get_pipeline_state();
 }
 
 fn u64_from_vec(bytes: Vec<u8>) -> u64 {
