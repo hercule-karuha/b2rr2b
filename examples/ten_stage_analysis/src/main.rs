@@ -8,6 +8,7 @@ fn main() {
     let mut server = B2RServer::new_with("/tmp/ten_stage");
     let mut pipe_getter = PipeLineGetter::new(&server);
 
+    // marked probes
     for i in 0..9 {
         let id: u32 = i;
         pipe_getter.add_fifo_probe(id);
@@ -17,6 +18,7 @@ fn main() {
         pipe_getter.add_rule_probe(id);
     }
 
+    // set input
     for i in input_data {
         server.put(20, i.to_le_bytes().to_vec())
     }
@@ -25,11 +27,12 @@ fn main() {
 
     thread::sleep(Duration::from_secs(5));
 
-    let mut fired: u32 = 0;
+    let mut _fired: u32 = 0;
     loop {
         let state = pipe_getter.get_pipeline_state();
-        if state.fire_rules.len() as u32 > fired {
-            fired = state.fire_rules.len() as u32;
+        // if rules fired in cycle i+1 > if rules fired in cycle i the pipeline is not stuck
+        if state.fire_rules.len() as u32 > _fired {
+            _fired = state.fire_rules.len() as u32;
         } else if state.empty_fifos.len() + state.full_fifos.len() == 9 { // if all fifos is empty or full the pipeline is stuck
             println!("pipeline stuck at cycle: {}", state.cycle);
             print!("full fifos:");
