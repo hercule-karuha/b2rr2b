@@ -5,13 +5,13 @@ use std::thread;
 use std::time::Duration;
 #[test]
 fn test_get() {
-    let mut server = B2RServer::new();
+    let mut server = B2RServer::new_with("/tmp/test_get");
 
     let _ = server.serve();
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
     let data: u64 = 114514;
     let mut stream =
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+        UnixStream::connect(String::from("/tmp/test_get")).expect("Failed to connect to socket");
 
     put(114, 514, data.to_le_bytes().to_vec(), &mut stream);
 
@@ -34,13 +34,13 @@ fn test_get() {
 
 #[test]
 fn test_try_get() {
-    let mut server = B2RServer::new();
+    let mut server = B2RServer::new_with("/tmp/test_try_get");
 
     let _ = server.serve();
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
     let data: u64 = 114514;
     let mut stream =
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+        UnixStream::connect(String::from("/tmp/test_try_get")).expect("Failed to connect to socket");
     put(114, 514, data.to_le_bytes().to_vec(), &mut stream);
 
     let mut id_getter = IDGetter::new(&server);
@@ -59,14 +59,14 @@ fn test_try_get() {
 
 #[test]
 fn test_get_cycle() {
-    let mut server = B2RServer::new();
+    let mut server = B2RServer::new_with("/tmp/test_get_cycle");
 
     let _ = server.serve();
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
 
     let data: u64 = 114514;
     let mut stream =
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+        UnixStream::connect(String::from("/tmp/test_get_cycle")).expect("Failed to connect to socket");
 
     put(0, 0, data.to_le_bytes().to_vec(), &mut stream);
     put(0, 1, data.to_le_bytes().to_vec(), &mut stream);
@@ -86,18 +86,18 @@ fn test_get_cycle() {
 #[test]
 #[should_panic(expected = "Failed to connect to socket")]
 fn test_connect_before_server() {
-    let mut server = B2RServer::new();
-    let _ = UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+    let mut server = B2RServer::new_with("/tmp/test_connect_before_server");
+    let _ = UnixStream::connect(String::from("/tmp/test_connect_before_server")).expect("Failed to connect to socket");
     let _ = server.serve();
 }
 
 #[test]
 fn test_deserialize_fail() {
-    let mut server = B2RServer::new();
+    let mut server = B2RServer::new_with("/tmp/test_deserialize_fail");
     let handle = server.serve();
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
     let mut stream =
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+        UnixStream::connect(String::from("/tmp/test_deserialize_fail")).expect("Failed to connect to socket");
 
     let data: u64 = 114514;
     put_data_directly(data.to_le_bytes().to_vec(), &mut stream);
@@ -107,7 +107,7 @@ fn test_deserialize_fail() {
 
 #[test]
 fn test_get_get_pipeline_state() {
-    let mut server = B2RServer::new();
+    let mut server = B2RServer::new_with("/tmp/test_get_get_pipeline_state");
     let mut pipe_getter = PipeLineGetter::new(&server);
 
     for i in 0..4 {
@@ -120,9 +120,9 @@ fn test_get_get_pipeline_state() {
     }
 
     let _ = server.serve();
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
     let mut stream =
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+        UnixStream::connect(String::from("/tmp/test_get_get_pipeline_state")).expect("Failed to connect to socket");
     let full_msg = vec![0, 1];
     let empty_msg = vec![1, 0];
     let not_full_empty = vec![1, 1];
@@ -136,7 +136,7 @@ fn test_get_get_pipeline_state() {
     put(12, 0, vec![1], &mut stream);
     put(14, 0, vec![1], &mut stream);
 
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
     let state = pipe_getter.get_pipeline_state();
 
     assert_eq!(state.cycle, 0);
@@ -153,19 +153,19 @@ fn test_get_get_pipeline_state() {
 #[test]
 #[should_panic]
 fn test_probe_type_error() {
-    let mut server = B2RServer::new();
+    let mut server = B2RServer::new_with("/tmp/test_probe_type_error");
     let mut pipe_getter = PipeLineGetter::new(&server);
 
     pipe_getter.add_fifo_probe(0);
     pipe_getter.add_rule_probe(1);
     let _ = server.serve();
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
     let mut stream =
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket");
+        UnixStream::connect(String::from("/tmp/test_probe_type_error")).expect("Failed to connect to socket");
 
     put(0, 0, vec![0, 0, 0], &mut stream);
 
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
     let _state = pipe_getter.get_pipeline_state();
 }
 
@@ -177,7 +177,7 @@ fn u64_from_vec(bytes: Vec<u8>) -> u64 {
 
 pub fn put(id: u32, cycles: u32, data: Vec<u8>, stream: &mut UnixStream) {
     // println!("send put");
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
     let b2r_message = B2RMessage {
         id,
         cycles,
@@ -195,12 +195,12 @@ pub fn put(id: u32, cycles: u32, data: Vec<u8>, stream: &mut UnixStream) {
     stream
         .write_all(&msg_with_size)
         .expect("Failed to write to stream");
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
 }
 
 pub fn put_data_directly(data: Vec<u8>, stream: &mut UnixStream) {
     // println!("send put");
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
 
     // The initial 4-byte data specifies the byte count of the message in the u32 format.
     let msg_size = data.len() as MsgSizeType;
@@ -211,5 +211,5 @@ pub fn put_data_directly(data: Vec<u8>, stream: &mut UnixStream) {
     stream
         .write_all(&msg_with_size)
         .expect("Failed to write to stream");
-    thread::sleep(Duration::from_micros(100));
+    thread::sleep(Duration::from_micros(300));
 }

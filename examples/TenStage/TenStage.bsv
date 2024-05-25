@@ -6,9 +6,11 @@ import RProbe::*;
 import FIFOF::*;
 import Vector::*;
 
+typedef 10 RULE_ID_START;
+
 (* synthesize *)
 module mkAdderPipeline(Empty);
-    function gen_fire_probes(Integer x) = mkRProbe(fromInteger(x + 10));
+    function gen_fire_probes(Integer x) = mkRProbe(fromInteger(x + valueOf(RULE_ID_START)));
 
     Vector#(9, FIFOF#(Bit#(32))) fifos <- replicateM(mkSizedFIFOF(5));
 
@@ -18,6 +20,8 @@ module mkAdderPipeline(Empty);
     Vector#(9, RProbe#(Bool, Bool)) fire_probes <- genWithM(gen_fire_probes);
 
     RProbe#(Bit#(32), Bit#(32)) recv_probe <- mkRProbe(20);
+
+    Bit#(32) stuck_num = 32'h5c;
 
     rule stage1;
         Bit#(32) data = recv_probe.get_data;
@@ -48,7 +52,7 @@ module mkAdderPipeline(Empty);
     
     rule stage5;
         Bit#(32) data = fifos[3].first;
-        if(data != 32'h5c) begin
+        if(data != stuck_num) begin
             fifos[3].deq;
             fire_probes[4].put_data(True);
             fifos[4].enq(data + 1);

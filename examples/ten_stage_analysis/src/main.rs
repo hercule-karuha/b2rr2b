@@ -5,17 +5,20 @@ use std::time::Duration;
 fn main() {
     let input_data: Vec<u32> = (1..200).collect();
 
-    let mut server = B2RServer::new();
+    let mut server = B2RServer::new_with("/tmp/ten_stage");
+    let mut pipe_getter = PipeLineGetter::new(&server);
+
+    for i in 0..9 {
+        let id: u32 = i;
+        pipe_getter.add_fifo_probe(id);
+    }
+    for i in 10..19 {
+        let id: u32 = i;
+        pipe_getter.add_rule_probe(id);
+    }
 
     for i in input_data {
         server.put(20, i.to_le_bytes().to_vec())
-    }
-    // mark the probe as fifo or fired
-    for i in 0..9 {
-        server.give_type(ProbeType::Fifo, i as u32);
-    }
-    for i in 10..19 {
-        server.give_type(ProbeType::Fired, i as u32);
     }
 
     let handlle = server.serve();
@@ -24,7 +27,7 @@ fn main() {
 
     let mut fired: u32 = 0;
     loop {
-        let state = server.get_pipeline_state();
+        let state = pipe_getter.get_pipeline_state();
         if state.fire_rules.len() as u32 > fired {
             fired = state.fire_rules.len() as u32;
         } else if state.empty_fifos.len() + state.full_fifos.len() == 9 { // if all fifos is empty or full the pipeline is stuck
@@ -39,7 +42,7 @@ fn main() {
             }
             print!("\nfired rules:");
             for id in state.fire_rules {
-                print!(" {} ", id)
+                print!(" {}  ", id)
             }
             print!("\n");
             break;

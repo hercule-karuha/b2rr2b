@@ -9,9 +9,13 @@ import FIFOF::*;
 interface RProbe#(type get_t, type put_t);
     method get_t get_data();
     method Action put_data(put_t data);
+    // should be called when there is no more message to send
+    method Action shut_down_server();
 endinterface
 
 module mkRProbe#(Bit#(WORD_WIDTH) id)(RProbe#(get_t, put_t)) provisos(Bits#(get_t, wid_get), Bits#(put_t, wid_put));
+    Bit#(WORD_WIDTH) shut_down_id = 32'hFFFFFFFF;
+    Bit#(WORD_WIDTH) shut_down_msg = 32'h0;
     Bit#(WORD_WIDTH) get_size = fromInteger(valueOf(TDiv#(wid_get, BYTE_WIDTH)));
     Bit#(WORD_WIDTH) put_size = fromInteger(valueOf(TDiv#(wid_put, BYTE_WIDTH)));
 
@@ -29,6 +33,10 @@ module mkRProbe#(Bit#(WORD_WIDTH) id)(RProbe#(get_t, put_t)) provisos(Bits#(get_
     method Action put_data(put_t data);
         let bvec = pack(data);
         put(id, cycles, bvec, put_size);
+    endmethod
+
+    method Action shut_down_server();
+        put(shut_down_id, cycles, shut_down_msg, put_size);
     endmethod
 endmodule
 

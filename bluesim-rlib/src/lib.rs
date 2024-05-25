@@ -3,6 +3,7 @@
 //! please compile this crate into an .a file and then link it to your bluesim executable.
 #![warn(clippy::unwrap_used)]
 use rb_link::{B2RMessage, GetPutMessage, MsgSizeType, MSG_SIZE_BYTES};
+use std::env;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::sync::OnceLock;
@@ -24,7 +25,11 @@ pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32)
         panic!("cycles over flow!");
     }
     let mut stream = STREAM.get_or_init(|| {
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket")
+        let socket = match env::var("B2R_SOCKET") {
+            Ok(path) => path,
+            Err(_) => "/tmp/b2rr2b".to_string(),
+        };
+        UnixStream::connect(String::from(socket)).expect("Failed to connect to socket")
     });
 
     let get_message = GetPutMessage::Get(id);
@@ -61,7 +66,11 @@ pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32)
     }
 
     let mut stream = STREAM.get_or_init(|| {
-        UnixStream::connect(String::from("/tmp/b2rr2b")).expect("Failed to connect to socket")
+        let socket = match env::var("B2R_SOCKET") {
+            Ok(path) => path,
+            Err(_) => "/tmp/b2rr2b".to_string(),
+        };
+        UnixStream::connect(String::from(socket)).expect("Failed to connect to socket")
     });
 
     let data_slice = std::slice::from_raw_parts(data_ptr, size as usize);
