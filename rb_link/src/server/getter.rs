@@ -99,7 +99,6 @@ pub struct PipeLineState {
     pub fire_rules: Vec<u32>,
 }
 
-
 pub struct PipeLineGetter {
     fifos: Vec<u32>,
     rules: Vec<u32>,

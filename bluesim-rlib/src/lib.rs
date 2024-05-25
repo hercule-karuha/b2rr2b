@@ -29,7 +29,7 @@ pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32)
             Ok(path) => path,
             Err(_) => "/tmp/b2rr2b".to_string(),
         };
-        UnixStream::connect(String::from(socket)).expect("Failed to connect to socket")
+        UnixStream::connect(socket).expect("Failed to connect to socket")
     });
 
     let get_message = GetPutMessage::Get(id);
@@ -70,7 +70,7 @@ pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32)
             Ok(path) => path,
             Err(_) => "/tmp/b2rr2b".to_string(),
         };
-        UnixStream::connect(String::from(socket)).expect("Failed to connect to socket")
+        UnixStream::connect(socket).expect("Failed to connect to socket")
     });
 
     let data_slice = std::slice::from_raw_parts(data_ptr, size as usize);

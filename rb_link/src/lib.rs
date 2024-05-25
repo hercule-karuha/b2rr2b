@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
-mod  test;
+mod test;
 
 mod config;
 mod server;
