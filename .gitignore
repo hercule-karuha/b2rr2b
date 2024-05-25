@@ -1,4 +1,4 @@
-/examples/adder-pipeline/build/
+/examples/AdderPipeline/build/
 /examples/TenStage/build/
 /probe-blue/build/
 **/target/
