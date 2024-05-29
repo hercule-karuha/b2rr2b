@@ -192,6 +192,60 @@ fn test_shut_down() {
     put(114, 514, vec![0], &mut stream);
 }
 
+#[test]
+fn test_publisher() {
+    let mut publisher = B2RPublisher::new_with("/tmp/test_publisher");
+    struct RuleListener;
+    impl Subscriber for RuleListener {
+        fn update(&mut self, messages: Vec<B2RMessage>) -> Vec<R2BMessage> {
+            assert_eq!(messages.len(), 3);
+            let id_0_message = messages.iter().find(|message| message.id == 0);
+            let id_1_message = messages.iter().find(|message| message.id == 1);
+            let id_2_message = messages.iter().find(|message| message.id == 2);
+
+            if let (Some(msg_0), Some(msg_1), Some(msg_2)) =
+                (id_0_message, id_1_message, id_2_message)
+            {
+                let msg_0_matches = msg_0.message[0] == 1;
+                let msg_2_matches = msg_2.message[0] == 1;
+                let msg_1_matches = msg_1.message[0] == 0;
+
+                if msg_0_matches && msg_1_matches && msg_2_matches {
+                    println!("Logging condition satisfied.");
+                    assert_eq!(msg_0.cycles, 1);
+                } else {
+                    assert_eq!(msg_0.cycles, 0);
+                }
+            }
+            Vec::new()
+        }
+
+        fn subscribed_ids(&self) -> Vec<u32> {
+            vec![0, 1, 2]
+        }
+    }
+
+    let listener = RuleListener;
+    publisher.add_subscriber(listener);
+
+    let _ = thread::spawn(|| {
+        thread::sleep(Duration::from_micros(500));
+        let mut stream = UnixStream::connect(String::from("/tmp/test_publisher"))
+            .expect("Failed to connect to socket");
+        put(0, 0, vec![0], &mut stream);
+        put(1, 0, vec![0], &mut stream);
+        put(2, 0, vec![1], &mut stream);
+
+        put(0, 1, vec![1], &mut stream);
+        put(1, 1, vec![0], &mut stream);
+        put(2, 1, vec![1], &mut stream);
+
+        put(SHUT_DOWN_ID, 1, vec![1], &mut stream);
+    });
+
+    publisher.serve();
+}
+
 fn u64_from_vec(bytes: Vec<u8>) -> u64 {
     u64::from_le_bytes([
         bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],

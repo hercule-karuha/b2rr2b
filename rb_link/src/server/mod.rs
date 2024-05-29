@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::sync::{Arc, Mutex};
+use std::sync::{atomic::AtomicU32, Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::{fs, usize};
 
@@ -16,6 +16,9 @@ pub enum GetPutMessage {
     Put(B2RMessage),
 }
 
+/// Message send to Bluesim:
+/// - id: ID of the probe that the message will send to
+/// - message: the message to send, Please ensure that message.len() == ceil(get_t_width/8), where get_t_width is the width of get_t defined in your BSV code.
 #[derive(Serialize, Deserialize)]
 pub struct R2BMessage {
     pub id: u32,
@@ -37,6 +40,7 @@ pub struct B2RMessage {
 /// Cache bidirectional data and send data upon receiving requests.
 pub struct B2RServer {
     socket_path: String,
+    cycle: Arc<AtomicU32>,
     b2r_cache: Arc<Mutex<HashMap<u32, VecDeque<B2RMessage>>>>,
     r2b_cache: Arc<Mutex<HashMap<u32, VecDeque<R2BMessage>>>>,
 }
@@ -47,13 +51,14 @@ impl B2RServer {
     pub fn new_with(path: &str) -> Self {
         B2RServer {
             socket_path: path.to_string(),
+            cycle: Arc::new(AtomicU32::new(0)),
             b2r_cache: Arc::new(Mutex::new(HashMap::new())),
             r2b_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     /// Start a thread to run the server.
-    /// Create a UnixListener at "/tmp/b2rr2b".
+    /// Create a UnixListener at socket_path.
     /// Return the JoinHandle of that thread.
     /// This function needs to be called before running your Bluesim program.
     /// the server thread returns when bluesim called shut_down_server()
@@ -61,6 +66,7 @@ impl B2RServer {
         // let probe_infos = self.probe_infos.clone();
         let b2r_cache = self.b2r_cache.clone();
         let r2b_cache = self.r2b_cache.clone();
+        let cycle = self.cycle.clone();
         let socket_path = self.socket_path.clone();
         thread::spawn(move || {
             let _ = fs::remove_file(socket_path.as_str());
@@ -92,6 +98,10 @@ impl B2RServer {
                         // println!("receive put to id {}", b2r_message.id);
                         // return if reveive message with SHUT_DOWN_ID
                         let id = b2r_message.id;
+                        let server_cycle = cycle.load(std::sync::atomic::Ordering::Acquire);
+                        if b2r_message.cycles > server_cycle {
+                            cycle.store(b2r_message.cycles, std::sync::atomic::Ordering::Release)
+                        }
                         let mut b2r_cache = b2r_cache.lock().expect("Fail to lock b2r_cache");
                         let queue = b2r_cache.entry(b2r_message.id).or_default();
                         queue.push_back(b2r_message);
@@ -112,6 +122,11 @@ impl B2RServer {
         let mut r2b_cache = self.r2b_cache.lock().expect("Fail to lock r2b_cache");
         let queue = r2b_cache.entry(id).or_default();
         queue.push_back(r2b_message);
+    }
+
+    /// return the newest message's cycle
+    pub fn current_cycle(&self) -> u32 {
+        self.cycle.load(std::sync::atomic::Ordering::Acquire)
     }
 }
 

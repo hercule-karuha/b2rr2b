@@ -2,11 +2,13 @@ use super::{B2RMessage, B2RServer};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 
+/// A getter to get message from the bluesim by id
 pub struct IDGetter {
     b2r_cache: Arc<Mutex<HashMap<u32, VecDeque<B2RMessage>>>>,
 }
 
 impl IDGetter {
+    /// Crate a new getter bind to the given server
     pub fn new(server: &B2RServer) -> Self {
         IDGetter {
             b2r_cache: server.b2r_cache.clone(),
@@ -52,11 +54,13 @@ impl IDGetter {
     }
 }
 
+/// A getter that retrieves messages from bluesim sequentially according to cycles.
 pub struct CycleGetter {
     b2r_cache: Arc<Mutex<HashMap<u32, VecDeque<B2RMessage>>>>,
 }
 
 impl CycleGetter {
+    /// Crate a new getter bind to the given server
     pub fn new(server: &B2RServer) -> Self {
         CycleGetter {
             b2r_cache: server.b2r_cache.clone(),
@@ -99,6 +103,8 @@ pub struct PipeLineState {
     pub fire_rules: Vec<u32>,
 }
 
+/// A getter that retrieves messages from specific probes sequentially according to cycles
+/// and aggregates them into PipeLineState.
 pub struct PipeLineGetter {
     fifos: Vec<u32>,
     rules: Vec<u32>,

@@ -22,7 +22,7 @@ module mkAdderPipeline(Empty);
         probe.put_data(data + 1);
         put_times <= put_times + 1;
         if(put_times == 9) begin
-            probe.shut_down_server();
+            probe.shut_down_server;
             $finish;
         end
     endrule
