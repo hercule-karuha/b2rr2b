@@ -17,16 +17,16 @@ pub enum GetPutMessage {
 }
 
 #[derive(Serialize, Deserialize)]
-struct R2BMessage {
-    id: u32,
-    message: Vec<u8>,
+pub struct R2BMessage {
+    pub id: u32,
+    pub message: Vec<u8>,
 }
 
 /// Message from Bluesim:
 /// - id: ID of the probe that sent the message
 /// - cycles: Clock cycles when the message was sent
 /// - message: Sent message, where message.len() == ceil(put_t_width/8). put_t_width is the width of put_t defined in your BSV code.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct B2RMessage {
     pub id: u32,
     pub cycles: u32,
@@ -41,22 +41,7 @@ pub struct B2RServer {
     r2b_cache: Arc<Mutex<HashMap<u32, VecDeque<R2BMessage>>>>,
 }
 
-impl Default for B2RServer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl B2RServer {
-    /// make a new server with socket: /tmp/b2rr2b
-    pub fn new() -> Self {
-        B2RServer {
-            socket_path: "/tmp/b2rr2b".to_string(),
-            b2r_cache: Arc::new(Mutex::new(HashMap::new())),
-            r2b_cache: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-
     /// make a new server with a socket path
     /// you need to specify the B2R_SOCKET environment variable when start the bluesim
     pub fn new_with(path: &str) -> Self {
@@ -106,12 +91,13 @@ impl B2RServer {
                     GetPutMessage::Put(b2r_message) => {
                         // println!("receive put to id {}", b2r_message.id);
                         // return if reveive message with SHUT_DOWN_ID
-                        if b2r_message.id == SHUT_DOWN_ID {
-                            return;
-                        }
+                        let id = b2r_message.id;
                         let mut b2r_cache = b2r_cache.lock().expect("Fail to lock b2r_cache");
                         let queue = b2r_cache.entry(b2r_message.id).or_default();
                         queue.push_back(b2r_message);
+                        if id == SHUT_DOWN_ID {
+                            return;
+                        }
                     }
                 }
             }

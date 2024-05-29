@@ -6,7 +6,9 @@
 mod test;
 
 mod config;
+mod publisher;
 mod server;
 
 pub use config::*;
+pub use publisher::*;
 pub use server::*;
