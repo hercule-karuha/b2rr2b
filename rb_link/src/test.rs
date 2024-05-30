@@ -188,7 +188,7 @@ fn test_shut_down() {
 
     let msg = id_getter.get(114);
     assert_eq!(msg.id, 114);
-    put(SHUT_DOWN_ID, 514, vec![0], &mut stream);
+    put_shut_down(&mut stream);
     put(114, 514, vec![0], &mut stream);
 }
 
@@ -240,7 +240,7 @@ fn test_publisher() {
         put(1, 1, vec![0], &mut stream);
         put(2, 1, vec![1], &mut stream);
 
-        put(SHUT_DOWN_ID, 1, vec![1], &mut stream);
+        put_shut_down(&mut stream);
     });
 
     publisher.serve();
@@ -284,6 +284,23 @@ pub fn put_data_directly(data: Vec<u8>, stream: &mut UnixStream) {
     let mut msg_with_size = Vec::with_capacity(MSG_SIZE_BYTES + data.len());
     msg_with_size.extend_from_slice(msg_size.to_le_bytes().as_slice());
     msg_with_size.extend(data.iter());
+
+    stream
+        .write_all(&msg_with_size)
+        .expect("Failed to write to stream");
+    thread::sleep(Duration::from_micros(400));
+}
+
+pub fn put_shut_down(stream: &mut UnixStream) {
+    thread::sleep(Duration::from_micros(400));
+    let put_message = GetPutMessage::ShutDown;
+    let serialized = bincode::serialize(&put_message).expect("Serialization failed");
+
+    // The initial 4-byte data specifies the byte count of the message in the u32 format.
+    let msg_size = serialized.len() as MsgSizeType;
+    let mut msg_with_size = Vec::with_capacity(MSG_SIZE_BYTES + serialized.len());
+    msg_with_size.extend_from_slice(msg_size.to_le_bytes().as_slice());
+    msg_with_size.extend(serialized.iter());
 
     stream
         .write_all(&msg_with_size)

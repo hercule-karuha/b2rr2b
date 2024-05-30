@@ -14,8 +14,8 @@ fn main() {
     //start a new thread to receive the data
     let _ = server.serve();
 
-    thread::sleep(Duration::from_secs(3));
-
+    thread::sleep(Duration::from_secs(5));
+ 
     let msg_vec = id_getter.get_id_all(0);
     for msg in msg_vec {
         println!(

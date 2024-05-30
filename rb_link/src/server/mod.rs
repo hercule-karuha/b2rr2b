@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::sync::{atomic::AtomicU32, Arc, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::{fs, usize};
 
@@ -14,6 +15,7 @@ pub use getter::*;
 pub enum GetPutMessage {
     Get(u32),
     Put(B2RMessage),
+    ShutDown,
 }
 
 /// Message send to Bluesim:
@@ -40,6 +42,7 @@ pub struct B2RMessage {
 /// Cache bidirectional data and send data upon receiving requests.
 pub struct B2RServer {
     socket_path: String,
+    running: Arc<AtomicBool>,
     cycle: Arc<AtomicU32>,
     b2r_cache: Arc<Mutex<HashMap<u32, VecDeque<B2RMessage>>>>,
     r2b_cache: Arc<Mutex<HashMap<u32, VecDeque<R2BMessage>>>>,
@@ -51,6 +54,7 @@ impl B2RServer {
     pub fn new_with(path: &str) -> Self {
         B2RServer {
             socket_path: path.to_string(),
+            running: Arc::new(AtomicBool::new(false)),
             cycle: Arc::new(AtomicU32::new(0)),
             b2r_cache: Arc::new(Mutex::new(HashMap::new())),
             r2b_cache: Arc::new(Mutex::new(HashMap::new())),
@@ -64,9 +68,11 @@ impl B2RServer {
     /// the server thread returns when bluesim called shut_down_server()
     pub fn serve(&mut self) -> JoinHandle<()> {
         // let probe_infos = self.probe_infos.clone();
+        self.running.store(true, Ordering::Release);
         let b2r_cache = self.b2r_cache.clone();
         let r2b_cache = self.r2b_cache.clone();
         let cycle = self.cycle.clone();
+        let running = self.running.clone();
         let socket_path = self.socket_path.clone();
         thread::spawn(move || {
             let _ = fs::remove_file(socket_path.as_str());
@@ -97,17 +103,18 @@ impl B2RServer {
                     GetPutMessage::Put(b2r_message) => {
                         // println!("receive put to id {}", b2r_message.id);
                         // return if reveive message with SHUT_DOWN_ID
-                        let id = b2r_message.id;
-                        let server_cycle = cycle.load(std::sync::atomic::Ordering::Acquire);
+
+                        let server_cycle = cycle.load(Ordering::Acquire);
                         if b2r_message.cycles > server_cycle {
-                            cycle.store(b2r_message.cycles, std::sync::atomic::Ordering::Release)
+                            cycle.store(b2r_message.cycles, Ordering::Release)
                         }
                         let mut b2r_cache = b2r_cache.lock().expect("Fail to lock b2r_cache");
                         let queue = b2r_cache.entry(b2r_message.id).or_default();
                         queue.push_back(b2r_message);
-                        if id == SHUT_DOWN_ID {
-                            return;
-                        }
+                    }
+                    GetPutMessage::ShutDown => {
+                        running.store(false, Ordering::Release);
+                        return;
                     }
                 }
             }
@@ -126,7 +133,12 @@ impl B2RServer {
 
     /// return the newest message's cycle
     pub fn current_cycle(&self) -> u32 {
-        self.cycle.load(std::sync::atomic::Ordering::Acquire)
+        self.cycle.load(Ordering::Acquire)
+    }
+
+    /// return the server running status
+    pub fn running(&self) -> bool {
+        self.running.load(Ordering::Acquire)
     }
 }
 

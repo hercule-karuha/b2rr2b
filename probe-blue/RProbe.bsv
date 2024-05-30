@@ -4,6 +4,7 @@ typedef 16 FIFO_INFO_WIDTH;
 
 import "BDPI" function Bit#(n) get(Bit#(WORD_WIDTH) id, Bit#(WORD_WIDTH) cycles, Bit#(WORD_WIDTH) size);
 import "BDPI" function Action put(Bit#(WORD_WIDTH) id, Bit#(WORD_WIDTH) cycles, Bit#(n) data, Bit#(WORD_WIDTH) size);
+import "BDPI" function Action shut_down();
 import FIFOF::*;
 
 interface RProbe#(type get_t, type put_t);
@@ -14,8 +15,6 @@ interface RProbe#(type get_t, type put_t);
 endinterface
 
 module mkRProbe#(Bit#(WORD_WIDTH) id)(RProbe#(get_t, put_t)) provisos(Bits#(get_t, wid_get), Bits#(put_t, wid_put));
-    Bit#(WORD_WIDTH) shut_down_id = 32'hFFFFFFFF;
-    Bit#(WORD_WIDTH) shut_down_msg = 32'h0;
     Bit#(WORD_WIDTH) get_size = fromInteger(valueOf(TDiv#(wid_get, BYTE_WIDTH)));
     Bit#(WORD_WIDTH) put_size = fromInteger(valueOf(TDiv#(wid_put, BYTE_WIDTH)));
 
@@ -36,7 +35,7 @@ module mkRProbe#(Bit#(WORD_WIDTH) id)(RProbe#(get_t, put_t)) provisos(Bits#(get_
     endmethod
 
     method Action shut_down_server();
-        put(shut_down_id, cycles, shut_down_msg, put_size);
+        shut_down();
     endmethod
 endmodule
 

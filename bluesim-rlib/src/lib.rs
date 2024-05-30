@@ -24,13 +24,7 @@ pub unsafe extern "C" fn get(res_ptr: *mut u8, id: u32, _cycles: u32, size: u32)
     if _cycles == u32::MAX {
         panic!("cycles over flow!");
     }
-    let mut stream = STREAM.get_or_init(|| {
-        let socket = match env::var("B2R_SOCKET") {
-            Ok(path) => path,
-            Err(_) => "/tmp/b2rr2b".to_string(),
-        };
-        UnixStream::connect(socket).expect("Failed to connect to socket")
-    });
+    let mut stream = STREAM.get_or_init(get_stream);
 
     let get_message = GetPutMessage::Get(id);
     let serialized = bincode::serialize(&get_message).expect("Serialization failed");
@@ -65,13 +59,7 @@ pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32)
         panic!("cycles over flow!");
     }
 
-    let mut stream = STREAM.get_or_init(|| {
-        let socket = match env::var("B2R_SOCKET") {
-            Ok(path) => path,
-            Err(_) => "/tmp/b2rr2b".to_string(),
-        };
-        UnixStream::connect(socket).expect("Failed to connect to socket")
-    });
+    let mut stream = STREAM.get_or_init(get_stream);
 
     let data_slice = std::slice::from_raw_parts(data_ptr, size as usize);
     let b2r_message = B2RMessage {
@@ -91,4 +79,33 @@ pub unsafe extern "C" fn put(id: u32, cycles: u32, data_ptr: *mut u8, size: u32)
     stream
         .write_all(&msg_with_size)
         .expect("Failed to write to stream");
+}
+
+/// # Safety
+/// This function should not be called by Rust code.
+/// no more message to send,send a shut down message to the server
+#[no_mangle]
+pub unsafe extern "C" fn shut_down() {
+    let mut stream = STREAM.get_or_init(get_stream);
+
+    let put_message = GetPutMessage::ShutDown;
+    let serialized = bincode::serialize(&put_message).expect("Serialization failed");
+
+    // The initial 4-byte data specifies the byte count of the message in the u32 format.
+    let msg_size = serialized.len() as MsgSizeType;
+    let mut msg_with_size = Vec::with_capacity(MSG_SIZE_BYTES + serialized.len());
+    msg_with_size.extend_from_slice(msg_size.to_le_bytes().as_slice());
+    msg_with_size.extend(serialized.iter());
+
+    stream
+        .write_all(&msg_with_size)
+        .expect("Failed to write to stream");
+}
+
+fn get_stream() -> UnixStream {
+    let socket = match env::var("B2R_SOCKET") {
+        Ok(path) => path,
+        Err(_) => "/tmp/b2rr2b".to_string(),
+    };
+    UnixStream::connect(socket).expect("Failed to connect to socket")
 }

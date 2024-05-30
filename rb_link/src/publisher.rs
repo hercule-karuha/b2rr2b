@@ -1,5 +1,4 @@
 use crate::server::*;
-use crate::SHUT_DOWN_ID;
 use std::time::Instant;
 
 /// The Subscriber can be used to listen to messages from specific probes
@@ -74,7 +73,7 @@ impl B2RPublisher {
             }
 
             //stopped when there are no more message
-            if messages.iter().any(|message| message.id == SHUT_DOWN_ID) {
+            if !self.server.running() {
                 break;
             }
         }
